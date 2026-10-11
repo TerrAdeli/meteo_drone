@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12161C">
+<title>Vol Drone — Conditions</title>
+<link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" rel="stylesheet"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#12161C;
+    --panel:#1A2029;
+    --panel-2:#1F2630;
+    --line:#2A323D;
+    --text:#E7ECF2;
+    --muted:#8B96A3;
+    --go:#33D17A;
+    --warn:#F0A93B;
+    --bad:#F1554C;
+    --accent:#5B8CFF;
+    --mono: 'Space Grotesk', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:60px;
+  }
+  h1,h2,h3,.num,button,.tag{font-family:'Space Grotesk', sans-serif;}
+  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 0;}
+
+  header{padding:4px 0 18px;border-bottom:1px solid var(--line);margin-bottom:18px;}
+  header .kicker{color:var(--muted);font-size:13px;letter-spacing:.02em;margin:0 0 2px;}
+  header h1{font-size:22px;font-weight:600;margin:0;line-height:1.25;}
+
+  /* status banner */
+  .status{
+    border:1px solid var(--line);
+    background:var(--panel);
+    padding:18px;
+    margin-bottom:18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .status::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--muted);}
+  .status.ok::before{background:var(--go);}
+  .status.warn::before{background:var(--warn);}
+  .status.bad::before{background:var(--bad);}
+  .status .label{font-size:24px;font-weight:700;letter-spacing:-0.01em;}
+  .status.ok .label{color:var(--go);}
+  .status.warn .label{color:var(--warn);}
+  .status.bad .label{color:var(--bad);}
+  .status .sub{color:var(--muted);font-size:13px;margin-top:6px;}
+  .status .loc{color:var(--muted);font-size:13px;margin-top:2px;}
+
+  .row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  button{
+    background:var(--accent);color:#0B0E13;border:none;font-weight:600;
+    font-size:14px;padding:11px 16px;cursor:pointer;
+  }
+  button.secondary{background:transparent;color:var(--text);border:1px solid var(--line);}
+  button:disabled{opacity:.5;cursor:default;}
+  button:active{transform:translateY(1px);}
+
+  h2.section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:none;
+    letter-spacing:.01em;margin:26px 0 10px;padding-top:2px;}
+
+  /* indicator cards */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);}
+  @media (max-width:480px){.grid{grid-template-columns:1fr;}}
+  .card{
+    background:var(--panel);
+    padding:14px 14px 12px;
+    border-left:4px solid var(--muted);
+    min-height:96px;
+  }
+  .card.ok{border-left-color:var(--go);}
+  .card.warn{border-left-color:var(--warn);}
+  .card.bad{border-left-color:var(--bad);}
+  .card .name{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .card .num{font-size:21px;font-weight:600;line-height:1.15;}
+  .card .detail{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.4;}
+  .card a{color:var(--accent);text-decoration:none;font-size:12.5px;}
+
+  /* manual verification panel */
+  .manual{
+    background:#2A2412;
+    border:1px solid #4A3E1B;
+    padding:16px;
+    margin-top:22px;
+  }
+  .manual h3{margin:0 0 4px;font-size:15px;color:var(--warn);}
+  .manual p{margin:0 0 12px;color:#C9BB92;font-size:13px;line-height:1.5;}
+  .check{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #4A3E1B;}
+  .check:first-of-type{border-top:none;}
+  .check input{margin-top:3px;width:17px;height:17px;flex:none;}
+  .check label{font-size:13.5px;line-height:1.4;}
+  .check a{color:var(--accent);text-decoration:underline;}
+
+  details.settings{margin-top:26px;border:1px solid var(--line);background:var(--panel);}
+  details.settings summary{padding:14px;cursor:pointer;font-weight:600;font-size:14px;list-style:none;}
+  details.settings summary::-webkit-details-marker{display:none;}
+  details.settings summary::before{content:'⚙ ';}
+  .settings-body{padding:0 14px 18px;}
+  .field-row{display:flex;gap:10px;margin-bottom:10px;}
+  .field{flex:1;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .field input, .field select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:9px 8px;font-size:14px;font-family:'Space Grotesk',sans-serif;
+  }
+  .settings-body h4{font-size:12px;color:var(--muted);margin:16px 0 8px;font-weight:600;}
+  .site-select{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:11px 8px;font-family:'Space Grotesk',sans-serif;font-size:14px;}
+  .site-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:13px;}
+  .site-row:first-child{border-top:none;}
+  .site-row .meta{color:var(--muted);font-size:11.5px;}
+  .site-row .del{background:transparent;border:none;color:var(--bad);font-size:15px;padding:2px 6px;cursor:pointer;flex:none;}
+  .site-empty{color:var(--muted);font-size:12.5px;padding:6px 0;}
+
+  footer{margin-top:28px;padding:16px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.6;}
+  footer a{color:var(--muted);}
+  .sources{margin-top:8px;}
+  .sources li{margin-bottom:3px;}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+    border-top-color:#0B0E13;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* map picker (fallback / manual location) */
+  .picker-overlay{position:fixed;inset:0;background:var(--bg);z-index:1000;display:none;flex-direction:column;}
+  .picker-overlay.open{display:flex;}
+  .picker-header{padding:14px 16px;border-bottom:1px solid var(--line);}
+  .picker-header h3{margin:0 0 2px;font-size:15px;}
+  .picker-header p{margin:0;color:var(--muted);font-size:12.5px;}
+  .picker-coords{font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--accent);margin-top:4px;min-height:16px;}
+  #pickerMap{flex:1;}
+  .picker-footer{padding:12px 16px;display:flex;gap:10px;border-top:1px solid var(--line);}
+  .picker-footer button{flex:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="kicker">France métropolitaine — GPS local</p>
+    <h1>Conditions de vol drone</h1>
+  </header>
+
+  <div id="status" class="status">
+    <div class="label" id="statusLabel">Non vérifié</div>
+    <div class="sub" id="statusSub">Lance une vérification pour évaluer les conditions actuelles.</div>
+    <div class="loc" id="statusLoc"></div>
+    <div class="row">
+      <button id="btnCheck">Vérifier les conditions</button>
+      <button id="btnPickMap" class="secondary">Choisir sur la carte</button>
+    </div>
+    <div class="row">
+      <select id="siteSelect" class="site-select">
+        <option value="">Sites enregistrés…</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="picker-overlay" id="pickerOverlay">
+    <div class="picker-header">
+      <h3>Choisir un lieu</h3>
+      <p>Touche la carte pour placer le repère, ou fais-le glisser pour l'ajuster.</p>
+      <div class="picker-coords" id="pickerCoords"></div>
+    </div>
+    <div id="pickerMap"></div>
+    <div class="picker-footer">
+      <button class="secondary" id="pickerCancel">Annuler</button>
+      <button id="pickerConfirm" disabled>Confirmer ce point</button>
+    </div>
+  </div>
+
+  <h2 class="section-title">Indicateurs automatisés</h2>
+  <div class="grid" id="grid">
+    <div class="card" data-k="wind"><div class="name">Vent (rafales)</div><div class="num">—</div><div class="detail">En attente</div></div>
+    <div class="card" data-k="rain"><div class="name">Précipitations</div><div class="num">—</div><div class="detail">En attente</div></div>
+    <div class="card" data-k="temp"><div class="name">Température</div><div class="num">—</div><div class="detail">En attente</div></div>
+    <div class="card" data-k="vis"><div class="name">Visibilité / brouillard</div><div class="num">—</div><div class="detail">En attente</div></div>
+    <div class="card" data-k="kp"><div class="name">Indice Kp</div><div class="num">—</div><div class="detail">En attente</div></div>
+    <div class="card" data-k="decl"><div class="name">Déclinaison magnétique</div><div class="num">—</div><div class="detail">En attente</div></div>
+    <div class="card" data-k="uas" style="grid-column:1 / -1;"><div class="name">Zone UAS permanente (catégorie Ouverte)</div><div class="num">—</div><div class="detail">En attente</div></div>
+  </div>
+
+  <div class="manual">
+    <h3>Vérifications manuelles obligatoires</h3>
+    <p>Aucune API publique fiable n'existe pour les NOTAM/SUP AIP ou les arrêtés municipaux. Le statut global reste à « à vérifier » tant que ces deux cases ne sont pas cochées, avant chaque mission.</p>
+    <div class="check">
+      <input type="checkbox" id="chkNotam">
+      <label for="chkNotam">Restrictions temporaires vérifiées (NOTAM / SUP AIP) — <a id="linkSia" href="https://www.sia.aviation-civile.gouv.fr" target="_blank" rel="noopener">SIA</a> · <a id="linkGeoportail" href="https://cartes.gouv.fr/explorer-les-cartes/" target="_blank" rel="noopener">cartes.gouv.fr</a></label>
+    </div>
+    <div class="check">
+      <input type="checkbox" id="chkMairie">
+      <label for="chkMairie">Arrêté municipal vérifié <span id="cityName"></span> — <a id="linkMairie" href="#" target="_blank" rel="noopener">rechercher l'arrêté</a></label>
+    </div>
+  </div>
+
+  <details class="settings">
+    <summary>Seuils & profil pilote</summary>
+    <div class="settings-body">
+      <h4>Seuils météo</h4>
+      <div class="field-row">
+        <div class="field"><label>Vent max, rafales (km/h)</label><input type="number" id="setWind" step="1"></div>
+        <div class="field"><label>Pluie max (mm/h)</label><input type="number" id="setRain" step="0.1"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Temp. min (°C)</label><input type="number" id="setTempMin" step="1"></div>
+        <div class="field"><label>Temp. max (°C)</label><input type="number" id="setTempMax" step="1"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Visibilité min (m)</label><input type="number" id="setVis" step="100"></div>
+        <div class="field"><label>Indice Kp max</label><input type="number" id="setKp" step="1"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Rayon de mission (m)</label><input type="number" id="setRadius" step="5"></div>
+      </div>
+
+      <h4>Profil pilote</h4>
+      <div class="field-row">
+        <div class="field">
+          <label>Classe du drone</label>
+          <select id="setClass">
+            <option>C0</option><option>C1</option><option>C2</option><option>C3</option><option>C4</option>
+            <option>Sans classe (aéronef légacy / import)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Catégorie retenue</label>
+          <select id="setCat">
+            <option>Ouverte — A1</option>
+            <option>Ouverte — A2</option>
+            <option>Ouverte — A3</option>
+            <option>Spécifique</option>
+          </select>
+        </div>
+      </div>
+      <div class="row"><button id="btnSave" class="secondary">Enregistrer les seuils & le profil</button></div>
+
+      <h4>Sites enregistrés</h4>
+      <div id="sitesList"><div class="site-empty">Aucun site enregistré pour l'instant.</div></div>
+      <div class="field-row">
+        <div class="field"><label>Nom du nouveau site</label><input type="text" id="newSiteName" placeholder="Ex. Terrain de Vernou"></div>
+      </div>
+      <div class="row"><button id="btnSaveSite" class="secondary">Enregistrer le point actuel sous ce nom</button></div>
+    </div>
+  </details>
+
+  <footer>
+    <div>Sources : Open-Meteo (météo), NOAA SWPC (indice Kp), NOAA NCEI WMM (déclinaison magnétique), DGAC/IGN Géoplateforme — diffusée sur cartes.gouv.fr (zones UAS catégorie Ouverte), Base Adresse Nationale (commune). Cette couche ne couvre que la catégorie Ouverte et exclut les restrictions temporaires — elle ne remplace pas une vérification NOTAM. Le test sur le rayon de mission est une approximation géométrique (échantillonnage du pourtour), pas une intersection polygonale exacte.</div>
+    <ul class="sources" id="fetchLog"></ul>
+  </footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script>
+const DEFAULTS = {
+  wind:30, rain:0.2, tempMin:0, tempMax:40, vis:5000, kp:5, radius:30,
+  droneClass:'C0', category:'Ouverte — A1'
+};
+const STORE_KEY = 'drone_conditions_settings_v1';
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return {...DEFAULTS};
+    return {...DEFAULTS, ...JSON.parse(raw)};
+  }catch(e){ return {...DEFAULTS}; }
+}
+function saveSettings(s){
+  localStorage.setItem(STORE_KEY, JSON.stringify(s));
+}
+let settings = loadSettings();
+
+function fillSettingsForm(){
+  document.getElementById('setWind').value = settings.wind;
+  document.getElementById('setRain').value = settings.rain;
+  document.getElementById('setTempMin').value = settings.tempMin;
+  document.getElementById('setTempMax').value = settings.tempMax;
+  document.getElementById('setVis').value = settings.vis;
+  document.getElementById('setKp').value = settings.kp;
+  document.getElementById('setRadius').value = settings.radius;
+  document.getElementById('setClass').value = settings.droneClass;
+  document.getElementById('setCat').value = settings.category;
+}
+fillSettingsForm();
+
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  settings = {
+    wind: parseFloat(document.getElementById('setWind').value)||DEFAULTS.wind,
+    rain: parseFloat(document.getElementById('setRain').value)||DEFAULTS.rain,
+    tempMin: parseFloat(document.getElementById('setTempMin').value),
+    tempMax: parseFloat(document.getElementById('setTempMax').value),
+    vis: parseFloat(document.getElementById('setVis').value)||DEFAULTS.vis,
+    kp: parseFloat(document.getElementById('setKp').value)||DEFAULTS.kp,
+    radius: parseFloat(document.getElementById('setRadius').value)||DEFAULTS.radius,
+    droneClass: document.getElementById('setClass').value,
+    category: document.getElementById('setCat').value
+  };
+  saveSettings(settings);
+  document.querySelector('details.settings').removeAttribute('open');
+});
+
+// ---------- saved sites ----------
+const SITES_KEY = 'drone_sites_v1';
+function loadSites(){
+  try{ return JSON.parse(localStorage.getItem(SITES_KEY)) || []; }catch(e){ return []; }
+}
+function saveSites(arr){ localStorage.setItem(SITES_KEY, JSON.stringify(arr)); }
+let sites = loadSites();
+
+function renderSites(){
+  const select = document.getElementById('siteSelect');
+  select.innerHTML = '<option value="">Sites enregistrés…</option>' +
+    sites.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+
+  const list = document.getElementById('sitesList');
+  if(sites.length === 0){
+    list.innerHTML = '<div class="site-empty">Aucun site enregistré pour l\'instant.</div>';
+    return;
+  }
+  list.innerHTML = sites.map((s,i)=>`
+    <div class="site-row">
+      <div><div>${s.name}</div><div class="meta">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</div></div>
+      <button class="del" data-i="${i}" title="Supprimer">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      sites.splice(parseInt(btn.dataset.i,10), 1);
+      saveSites(sites);
+      renderSites();
+    });
+  });
+}
+renderSites();
+
+document.getElementById('siteSelect').addEventListener('change', (e)=>{
+  const i = e.target.value;
+  if(i === '') return;
+  const s = sites[parseInt(i,10)];
+  if(s) runChecksForCoords(s.lat, s.lon, 'site');
+});
+
+document.getElementById('btnSaveSite').addEventListener('click', ()=>{
+  const nameInput = document.getElementById('newSiteName');
+  const name = nameInput.value.trim();
+  if(!lastCoords){
+    alert('Fais d\'abord une vérification (GPS, carte ou site) pour définir un point à enregistrer.');
+    return;
+  }
+  if(!name){
+    alert('Donne un nom à ce site.');
+    return;
+  }
+  sites.push({name, lat: lastCoords.lat, lon: lastCoords.lon});
+  saveSites(sites);
+  renderSites();
+  nameInput.value = '';
+});
+
+// ---------- helpers ----------
+function withTimeout(promise, ms){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms);
+  return {ctrl, run: promise(ctrl.signal).finally(()=>clearTimeout(t))};
+}
+async function fetchJSON(url, ms=9000){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms);
+  try{
+    const res = await fetch(url, {signal: ctrl.signal});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  } finally { clearTimeout(t); }
+}
+function findKeyDeep(obj, key){
+  if(obj && typeof obj === 'object'){
+    if(key in obj) return obj[key];
+    for(const k in obj){
+      const found = findKeyDeep(obj[k], key);
+      if(found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+function pointInRing(lon, lat, ring){
+  let inside = false;
+  for(let i=0, j=ring.length-1; i<ring.length; j=i++){
+    const xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+    const intersect = ((yi>lat)!==(yj>lat)) && (lon < (xj-xi)*(lat-yi)/((yj-yi)||1e-12) + xi);
+    if(intersect) inside = !inside;
+  }
+  return inside;
+}
+function pointInGeometry(lon, lat, geom){
+  if(!geom) return false;
+  if(geom.type === 'Polygon'){
+    let count = 0;
+    for(const ring of geom.coordinates) if(pointInRing(lon,lat,ring)) count++;
+    return count % 2 === 1;
+  }
+  if(geom.type === 'MultiPolygon'){
+    for(const poly of geom.coordinates){
+      let count = 0;
+      for(const ring of poly) if(pointInRing(lon,lat,ring)) count++;
+      if(count % 2 === 1) return true;
+    }
+  }
+  return false;
+}
+function distMeters(lat1, lon1, lat2, lon2){
+  const R = 6371000, toRad = d => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function bufferSamplePoints(lat, lon, radiusM, n=24){
+  // approximation équirectangulaire, suffisante à l'échelle d'un rayon de mission (dizaines/centaines de m)
+  const dLat = radiusM/111320;
+  const dLon = radiusM/(111320*Math.cos(lat*Math.PI/180) || 1e-6);
+  const pts = [];
+  for(let i=0;i<n;i++){
+    const a = 2*Math.PI*i/n;
+    pts.push([lon + dLon*Math.cos(a), lat + dLat*Math.sin(a)]); // [lon,lat]
+  }
+  return pts;
+}
+function setCard(key, status, num, detail){
+  const el = document.querySelector(`.card[data-k="${key}"]`);
+  el.className = 'card ' + status;
+  el.querySelector('.num').textContent = num;
+  el.querySelector('.detail').innerHTML = detail;
+}
+function logSource(name, ok, note){
+  const li = document.createElement('li');
+  li.textContent = `${ok ? '✓' : '✗'} ${name}${note ? ' — '+note : ''}`;
+  document.getElementById('fetchLog').prepend(li);
+}
+
+// ---------- geolocation ----------
+function getPosition(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){ reject(new Error('Géolocalisation non supportée')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve(pos.coords),
+      err => reject(err),
+      {enableHighAccuracy:true, timeout:15000, maximumAge:0}
+    );
+  });
+}
+
+// ---------- map picker (fallback / manual location) ----------
+let pickerMap = null, pickerMarker = null;
+let lastCoords = null;
+
+function ensurePickerMap(){
+  if(pickerMap) return;
+  pickerMap = L.map('pickerMap', {zoomControl:true}).setView([46.6, 2.5], 6);
+  L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+    attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors, Tiles style by <a href=\"https://www.hotosm.org/\" target=\"_blank\">Humanitarian OpenStreetMap Team</a> hosted by <a href=\"https://openstreetmap.fr/\" target=\"_blank\">OpenStreetMap France</a>",
+    maxZoom: 19
+  }).addTo(pickerMap);
+
+  // couche officielle des restrictions UAS (catégorie Ouverte) — DGAC/IGN Géoplateforme, via cartes.gouv.fr
+  const uasLayer = L.tileLayer.wms('https://data.geopf.fr/wms-r/wms', {
+    layers: 'TRANSPORTS.DRONES.RESTRICTIONS',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    opacity: 0.6,
+    attribution: 'DGAC/IGN — cartes.gouv.fr'
+  }).addTo(pickerMap);
+  L.control.layers(null, {'Zones UAS (DGAC/IGN)': uasLayer}, {collapsed:false, position:'bottomleft'}).addTo(pickerMap);
+
+  pickerMap.on('click', (e)=> setPickerMarker(e.latlng.lat, e.latlng.lng));
+}
+function setPickerMarker(lat, lon){
+  if(pickerMarker){
+    pickerMarker.setLatLng([lat, lon]);
+  } else {
+    pickerMarker = L.marker([lat, lon], {draggable:true}).addTo(pickerMap);
+    pickerMarker.on('dragend', ()=>{
+      const p = pickerMarker.getLatLng();
+      updatePickerCoordsLabel(p.lat, p.lng);
+    });
+  }
+  updatePickerCoordsLabel(lat, lon);
+  document.getElementById('pickerConfirm').disabled = false;
+}
+function updatePickerCoordsLabel(lat, lon){
+  document.getElementById('pickerCoords').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+}
+function openPicker(prefill){
+  document.getElementById('pickerOverlay').classList.add('open');
+  ensurePickerMap();
+  setTimeout(()=> pickerMap.invalidateSize(), 60);
+  if(prefill){
+    setPickerMarker(prefill.lat, prefill.lon);
+    pickerMap.setView([prefill.lat, prefill.lon], 13);
+  }
+}
+function closePicker(){
+  document.getElementById('pickerOverlay').classList.remove('open');
+}
+document.getElementById('btnPickMap').addEventListener('click', ()=> openPicker(lastCoords));
+document.getElementById('pickerCancel').addEventListener('click', closePicker);
+document.getElementById('pickerConfirm').addEventListener('click', ()=>{
+  const p = pickerMarker.getLatLng();
+  closePicker();
+  runChecksForCoords(p.lat, p.lng, 'carte');
+});
+
+// ---------- weather (Open-Meteo) ----------
+const WMO = {
+  0:'ciel dégagé',1:'peu nuageux',2:'partiellement nuageux',3:'couvert',
+  45:'brouillard',48:'brouillard givrant',
+  51:'bruine faible',53:'bruine',55:'bruine dense',
+  61:'pluie faible',63:'pluie',65:'pluie forte',
+  71:'neige faible',73:'neige',75:'neige forte',
+  80:'averses faibles',81:'averses',82:'averses violentes',
+  95:'orage',96:'orage + grêle',99:'orage + grêle fort'
+};
+async function checkWeather(lat, lon){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover&hourly=visibility&wind_speed_unit=kmh&timezone=auto`;
+  const data = await fetchJSON(url);
+  const cur = data.current;
+  const wcode = cur.weather_code;
+  const desc = WMO[wcode] || `code ${wcode}`;
+
+  // wind
+  const gust = cur.wind_gusts_10m;
+  setCard('wind', gust > settings.wind ? 'bad' : (gust > settings.wind*0.75 ? 'warn':'ok'),
+    `${gust.toFixed(0)} km/h`, `Vent moyen ${cur.wind_speed_10m.toFixed(0)} km/h · seuil ${settings.wind} km/h`);
+
+  // rain
+  const rain = cur.precipitation;
+  setCard('rain', rain > settings.rain ? 'bad' : 'ok',
+    `${rain.toFixed(1)} mm`, `${desc} · seuil ${settings.rain} mm/h`);
+
+  // temp
+  const temp = cur.temperature_2m;
+  const tBad = temp < settings.tempMin || temp > settings.tempMax;
+  setCard('temp', tBad ? 'bad':'ok', `${temp.toFixed(1)} °C`, `Plage réglée ${settings.tempMin}–${settings.tempMax} °C`);
+
+  // visibility (nearest hourly slot) + fog flag from weather code
+  let visM = null;
+  if(data.hourly && data.hourly.time && data.hourly.visibility){
+    const now = new Date(cur.time);
+    let bestIdx = 0, bestDiff = Infinity;
+    data.hourly.time.forEach((t,i)=>{
+      const diff = Math.abs(new Date(t) - now);
+      if(diff < bestDiff){ bestDiff = diff; bestIdx = i; }
+    });
+    visM = data.hourly.visibility[bestIdx];
+  }
+  const isFog = (wcode === 45 || wcode === 48);
+  const visBad = (visM !== null && visM < settings.vis) || isFog;
+  setCard('vis', visBad ? 'bad' : 'ok',
+    visM !== null ? `${(visM/1000).toFixed(1)} km` : '—',
+    isFog ? `${desc} signalé` : `Seuil ${(settings.vis/1000).toFixed(1)} km`);
+
+  logSource('Open-Meteo', true);
+}
+
+// ---------- Kp index (NOAA SWPC) ----------
+async function checkKp(){
+  const data = await fetchJSON('https://services.swpc.noaa.gov/json/planetary_k_index_1m.json');
+  const last = data[data.length-1];
+  const kp = last.estimated_kp;
+  setCard('kp', kp > settings.kp ? 'bad' : (kp > settings.kp-1 ? 'warn':'ok'),
+    kp.toFixed(2), `Seuil ${settings.kp} · maj ${new Date(last.time_tag+'Z').toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} UTC`);
+  logSource('NOAA SWPC (Kp)', true);
+}
+
+// ---------- magnetic declination (NOAA NCEI WMM, shared demo key) ----------
+async function checkDeclination(lat, lon){
+  try{
+    const url = `https://www.ngdc.noaa.gov/geomag-web/calculators/calculateDeclination?lat1=${lat}&lon1=${lon}&resultFormat=json&key=zNEw7`;
+    const data = await fetchJSON(url, 7000);
+    const decl = findKeyDeep(data, 'declination');
+    if(decl === undefined) throw new Error('champ introuvable');
+    setCard('decl', 'ok', `${Number(decl).toFixed(1)}°`, 'Modèle WMM (NOAA/NGA) — vérifie le compas au sol avant vol');
+    logSource('NOAA NCEI (déclinaison)', true);
+  }catch(e){
+    setCard('decl', 'warn', 'Indisponible', `Réseau/CORS ou clé de démo limitée — <a href="https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#declination" target="_blank" rel="noopener">calculer sur NOAA</a>`);
+    logSource('NOAA NCEI (déclinaison)', false, e.message);
+  }
+}
+
+// ---------- permanent UAS restriction (DGAC/IGN Géoplateforme WFS) ----------
+// Teste une surface (rayon de mission), pas seulement le point : centre + points
+// échantillonnés sur le pourtour du rayon + sommets des zones à moins du rayon.
+// Approximation géométrique (pas une vraie intersection polygone/cercle) — voir note dans le pied de page.
+async function checkUas(lat, lon, radiusM){
+  const r = radiusM || 30;
+  const d = Math.max(0.02, (r+300)/111320);
+  const bbox = `${lon-d},${lat-d},${lon+d},${lat+d},EPSG:4326`;
+  const url = `https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=TRANSPORTS.DRONES.RESTRICTIONS:carte_restriction_drones_lf&OUTPUTFORMAT=application/json&SRSNAME=EPSG:4326&COUNT=100&BBOX=${bbox}`;
+  const cartesUrl = `https://cartes.gouv.fr/explorer-les-cartes/`;
+  const viewLink = `<a href="#" onclick="openPicker(lastCoords);return false;">voir sur la carte</a> · <a href="${cartesUrl}" target="_blank" rel="noopener">cartes.gouv.fr</a>`;
+  try{
+    const data = await fetchJSON(url, 9000);
+    const feats = data.features || [];
+    const samples = bufferSamplePoints(lat, lon, r);
+
+    let overlap = false;
+    for(const f of feats){
+      const geom = f.geometry;
+      if(pointInGeometry(lon, lat, geom)){ overlap = true; break; }
+      if(samples.some(([slon,slat]) => pointInGeometry(slon, slat, geom))){ overlap = true; break; }
+      const rings = geom.type === 'Polygon' ? geom.coordinates
+                  : geom.type === 'MultiPolygon' ? geom.coordinates.flat() : [];
+      const vertexClose = rings.some(ring => ring.some(([vlon,vlat]) => distMeters(lat, lon, vlat, vlon) <= r));
+      if(vertexClose){ overlap = true; break; }
+    }
+    const near = feats.length > 0;
+
+    if(overlap){
+      setCard('uas', 'bad', 'Zone identifiée', `Restriction catégorie Ouverte recoupant le rayon de ${r} m — ${viewLink}`);
+    } else if(near){
+      setCard('uas', 'warn', 'Zone à proximité', `Une restriction existe à proximité, hors du rayon de ${r} m — ${viewLink}`);
+    } else {
+      setCard('uas', 'ok', 'Aucune détectée', `Sur un rayon de ${r} m, catégorie Ouverte uniquement — ${viewLink}`);
+    }
+    logSource('DGAC/IGN Géoplateforme (WFS)', true);
+  }catch(e){
+    setCard('uas', 'warn', 'Indisponible', `Requête WFS impossible — ${viewLink}`);
+    logSource('DGAC/IGN Géoplateforme (WFS)', false, e.message);
+  }
+}
+
+// ---------- reverse geocoding (BAN) ----------
+async function fillCity(lat, lon){
+  try{
+    const data = await fetchJSON(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`);
+    const city = data.features && data.features[0] && data.features[0].properties.city;
+    if(city){
+      document.getElementById('cityName').textContent = `(${city})`;
+      document.getElementById('linkMairie').href = `https://www.google.com/search?q=${encodeURIComponent('arrêté municipal drone '+city)}`;
+      document.getElementById('statusLoc').textContent += ` · ${city}`;
+    }
+    logSource('Base Adresse Nationale', true);
+  }catch(e){
+    logSource('Base Adresse Nationale', false, e.message);
+  }
+}
+
+// ---------- overall status ----------
+function computeOverall(){
+  const cards = Array.from(document.querySelectorAll('.card'));
+  const states = cards.map(c => c.classList.contains('bad') ? 'bad' : c.classList.contains('warn') ? 'warn' : 'ok');
+  const manualDone = document.getElementById('chkNotam').checked && document.getElementById('chkMairie').checked;
+  const banner = document.getElementById('status');
+  const label = document.getElementById('statusLabel');
+  const sub = document.getElementById('statusSub');
+
+  let level = 'ok';
+  if(states.includes('bad')) level = 'bad';
+  else if(states.includes('warn')) level = 'warn';
+
+  if(!manualDone && level === 'ok') level = 'warn';
+
+  banner.className = 'status ' + level;
+  if(level === 'bad'){
+    label.textContent = 'NO-GO';
+    sub.textContent = 'Un ou plusieurs seuils ou restrictions dépassent tes réglages.';
+  } else if(level === 'warn'){
+    label.textContent = 'À VÉRIFIER';
+    sub.textContent = manualDone ? 'Un indicateur nécessite ton attention.' : 'Vérifications manuelles (NOTAM, arrêté municipal) non confirmées.';
+  } else {
+    label.textContent = 'GO';
+    sub.textContent = 'Tous les indicateurs automatisés et manuels sont au vert.';
+  }
+}
+document.getElementById('chkNotam').addEventListener('change', computeOverall);
+document.getElementById('chkMairie').addEventListener('change', computeOverall);
+
+// ---------- run ----------
+async function runChecksForCoords(lat, lon, source){
+  lastCoords = {lat, lon};
+  const btn = document.getElementById('btnCheck');
+  document.getElementById('fetchLog').innerHTML = '';
+  const sourceLabel = source === 'carte' ? 'point choisi sur la carte' : source === 'site' ? 'site enregistré' : 'GPS';
+  document.getElementById('statusLoc').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)} · ${sourceLabel}`;
+  btn.disabled = true;
+  btn.textContent = 'Récupération des données…';
+  try{
+    await Promise.allSettled([
+      checkWeather(lat, lon),
+      checkKp(),
+      checkDeclination(lat, lon),
+      checkUas(lat, lon, settings.radius),
+      fillCity(lat, lon)
+    ]);
+    computeOverall();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Vérifier les conditions';
+  }
+}
+
+document.getElementById('btnCheck').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btnCheck');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Localisation…';
+  try{
+    const coords = await getPosition();
+    await runChecksForCoords(coords.latitude, coords.longitude, 'gps');
+  }catch(e){
+    btn.disabled = false;
+    btn.textContent = 'Vérifier les conditions';
+    document.getElementById('statusLabel').textContent = 'GPS indisponible';
+    document.getElementById('statusSub').textContent = 'Choisis un point sur la carte.';
+    openPicker(lastCoords);
+  }
+});
+</script>
+</body>
+</html>
